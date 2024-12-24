@@ -35,11 +35,16 @@ router.get('/booklets', async (req, res) => {
       .limit(limitNum);  // Limit the number of results per page
       
 
-    const bookletsWithUrls = booklets.map((booklet) => ({
-      ...booklet.toObject(),
-      bookletPdf: `/${booklet.bookletPdf}`,
-      images: booklet.images.map((img) => `/${img}`),
+      const bookletsWithUrls = booklets.map((booklet) => ({
+        ...booklet.toObject(),
+        bookletPdf: booklet.bookletPdf
+            ? `${req.protocol}://${req.get('host')}/${booklet.bookletPdf}`
+            : null,
+        images: booklet.images
+            ? booklet.images.map((img) => `${req.protocol}://${req.get('host')}/${img}`)
+            : null,
     }));
+    
 
     res.status(200).json({
       booklets: bookletsWithUrls,
