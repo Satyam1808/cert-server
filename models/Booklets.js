@@ -1,14 +1,13 @@
 const mongoose = require('mongoose');
 
-// Update the schema to include admin reference
 const bookletsSchema = new mongoose.Schema({
-  bookletTitle: String,
-  bookletPdf: String,
-  images: [String],
+  bookletTitle: { type: String, required: true },
+  bookletPdf: { type: String, required: true }, // Ensuring this is required
+  images: [{ type: String, required: true }],
   admin: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Admin' // Ensure this matches your Admin model
-  }
+    ref: 'Admin', // Reference to the Admin model
+  },
 }, { timestamps: { createdAt: 'createdAt' } });
 
 const Booklets = mongoose.model('Booklets', bookletsSchema);

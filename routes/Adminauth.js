@@ -8,4 +8,5 @@ router.post('/login', adminAuthcontroller.login);
 router.post('/forgot-password', adminAuthcontroller.forgotPassword);
 router.post('/reset-password', adminAuthcontroller.resetPassword);
 
+
 module.exports = router;

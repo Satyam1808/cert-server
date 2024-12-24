@@ -5,11 +5,16 @@ const nodemailer = require('nodemailer');
 const otpGenerator = require('otp-generator');
 const { JWT_SECRET } = require('../config/Jwt');
 const crypto = require('crypto');
+const path = require("path");
+const fs = require('fs');
 require('dotenv').config();
+const mongoose = require('mongoose');
 const { check, validationResult } = require('express-validator');
+
 
 // Temporary store for OTPs and user details
 const otpStore = new Map();
+const loginAttempts = new Map();
 
 // Configure email transporter
 const transporter = nodemailer.createTransport({
@@ -20,14 +25,14 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Registration Endpoint
+/// Registration Endpoint
 exports.register = [
-  // Validate inputs
+  check('name').notEmpty().withMessage('Name is required'),
   check('email').isEmail().withMessage('Invalid email address'),
   check('mobile').isLength({ min: 10, max: 10 }).isNumeric().withMessage('Mobile number must be 10 digits'),
-  check('password').matches(/.*[a-zA-Z].*/).withMessage('Password must contain at least one letter')
+  check('password')
+    .matches(/.*[a-zA-Z].*/).withMessage('Password must contain at least one letter')
     .matches(/.*\d.*/).withMessage('Password must contain at least one number'),
-
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -37,7 +42,9 @@ exports.register = [
     const { name, email, mobile, password } = req.body;
 
     try {
-      let user = await User.findOne({ email });
+      const sanitizedEmail = email.trim().toLowerCase();
+
+      let user = await User.findOne({ email: sanitizedEmail });
 
       if (user) {
         return res.status(200).json({ msg: 'User already exists', userExists: true });
@@ -47,37 +54,39 @@ exports.register = [
         digits: true,
         lowerCaseAlphabets: false,
         upperCaseAlphabets: false,
-        specialChars: false
+        specialChars: false,
       });
 
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(password, 12);
 
-      // Store OTP with timestamp for validity check (1 minute = 60000 ms)
-      otpStore.set(email, { 
-        otp, 
-        expiresAt: Date.now() + 60000, // OTP is valid for 1 minute
-        userData: { name, email, mobile, password: hashedPassword } 
+      otpStore.set(sanitizedEmail, {
+        otp,
+        expiresAt: Date.now() + 60000,
+        userData: { name, email: sanitizedEmail, mobile, password: hashedPassword },
       });
 
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
-        to: email,
+        to: sanitizedEmail,
         subject: 'Your OTP Code for CERT-In',
-        text: `Your OTP code is ${otp}. It is valid for 1 minute.`
+        text: `Your OTP code is ${otp}. It is valid for 1 minute.`,
       });
 
       res.status(200).json({ msg: 'OTP sent successfully', userExists: false });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ msg: 'Server error' });
     }
-  }
+  },
 ];
 
 
 // OTP Verification Endpoint
 exports.verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
-  const storedOtpData = otpStore.get(email);
+  const sanitizedEmail = email.trim().toLowerCase();
+
+  const storedOtpData = otpStore.get(sanitizedEmail);
 
   if (!storedOtpData) {
     return res.status(400).json({ msg: 'Invalid OTP or expired' });
@@ -85,28 +94,43 @@ exports.verifyOtp = async (req, res) => {
 
   const { otp: storedOtp, expiresAt, userData } = storedOtpData;
 
-  // Check if OTP is valid and not expired
-  if (storedOtp !== otp || Date.now() > expiresAt) {
-    return res.status(400).json({ msg: 'Invalid OTP or expired' });
+  if (Date.now() > expiresAt) {
+    otpStore.delete(sanitizedEmail);
+    return res.status(400).json({ msg: 'OTP has expired' });
   }
 
-  try {
-    const { name, mobile, password } = userData;
-
-    let existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ msg: 'User already exists' });
-    }
-
-    const newUser = new User({ name, email, mobile, password });
-    await newUser.save();
-
-    otpStore.delete(email); // Remove OTP after successful verification
-
-    res.status(200).json({ msg: 'User registered successfully' });
-  } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+  if (storedOtp !== otp) {
+    return res.status(400).json({ msg: 'Invalid OTP. Please try again' });
   }
+
+  const { name, mobile, password } = userData;
+
+  let existingUser = await User.findOne({ email: sanitizedEmail });
+  const profileImage = "";
+
+  if (existingUser) {
+    otpStore.delete(sanitizedEmail);
+    return res.status(400).json({ msg: 'User already exists' });
+  }
+
+  const newUser = new User({ name, email: sanitizedEmail, mobile, profileImage, password });
+  await newUser.save();
+
+  otpStore.delete(sanitizedEmail);
+
+  const token = jwt.sign(
+    {
+      userId: newUser.id,
+      name: newUser.name,
+      emailId: newUser.email,
+      mobile: newUser.mobile,
+      profileImage: newUser.profileImage,
+    },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+
+  res.status(200).json({ token });
 };
 
 
@@ -120,6 +144,11 @@ exports.resendOtp = async (req, res) => {
   }
 
   try {
+    const user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ msg: 'User already exists', userExists: true });
+    }
+
     const otp = otpGenerator.generate(4, {
       digits: true,
       lowerCaseAlphabets: false,
@@ -127,10 +156,12 @@ exports.resendOtp = async (req, res) => {
       specialChars: false
     });
 
+    const { name, mobile, password } = storedOtpData ? storedOtpData.userData : req.body; // Adjust based on how you pass user data
+
     otpStore.set(email, { 
       otp, 
       expiresAt: Date.now() + 60000, // OTP is valid for 1 minute
-      userData: storedOtpData.userData 
+      userData: { name, email, mobile, password } 
     });
 
     await transporter.sendMail({
@@ -142,39 +173,126 @@ exports.resendOtp = async (req, res) => {
 
     res.status(200).json({ msg: 'New OTP sent successfully' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
 
-
-// Login Endpoint
 exports.login = async (req, res) => {
   const { email, password } = req.body;
+  const sanitizedEmail = email.trim().toLowerCase();
 
   try {
-    const normalizedEmail = email.toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    if (!sanitizedEmail || !password) {
+      return res.status(400).json({ msg: 'Email and password are required' });
+    }
+
+    const user = await User.findOne({ email: sanitizedEmail });
 
     if (!user) {
-      return res.status(400).json({ msg: 'Invalid credentials' });
+      return res.status(400).json({ msg: 'Email is not registered' });
+    }
+
+    const loginAttemptData = loginAttempts.get(sanitizedEmail) || { attempts: 0, lockedUntil: 0 };
+
+    // Check if user is locked out
+    if (loginAttemptData.lockedUntil > Date.now()) {
+      const timeLeft = Math.ceil((loginAttemptData.lockedUntil - Date.now()) / 1000);
+      return res.status(400).json({ msg: `Too many failed attempts. Try again in ${timeLeft} seconds.` });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
+      const newAttempts = loginAttemptData.attempts + 1;
+
+      if (newAttempts >= 3) {
+        loginAttempts.set(sanitizedEmail, { attempts: 3, lockedUntil: Date.now() + 5 * 60 * 1000 });
+        return res.status(400).json({ msg: 'Too many failed attempts. Try again in 5 minutes.' });
+      }
+
+      loginAttempts.set(sanitizedEmail, { attempts: newAttempts, lockedUntil: 0 });
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
+    
 
-    const payload = {
-      user: {
-        id: user.id,
+    // Reset login attempts on successful login
+    loginAttempts.delete(sanitizedEmail);
+
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        name: user.name,
+        emailId: user.email,
+        mobile: user.mobile,
+        profileImage: user.profileImage,
       },
-    };
-
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
 
     res.status(200).json({ token });
   } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Middleware to get current user
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId).select('-password'); // Exclude password
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select('-password'); // Exclude passwords
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({ msg: 'No users found' });
+    }
+
+    res.json({
+      message: 'Users fetched successfully',
+      users,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Get user by ID
+exports.getUserById = async (req, res) => {
+  try {
+    const { userId } = req.params; // Get userId from URL parameters
+
+    // Validate if the userId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ msg: 'Invalid user ID' });
+    }
+
+    const user = await User.findById(userId).select('-password'); // Exclude password
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -244,4 +362,98 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+exports.updateProfileImage = async (req, res) => {
+  const { userId } = req.user;
+
+  try {
+      const user = await User.findById(userId);
+
+      if (!user) {
+          return res.status(404).json({ msg: 'User not found' });
+      }
+
+      if (!req.file) {
+          return res.status(400).json({ msg: 'No image file uploaded' });
+      }
+
+      // Delete the old profile image if it exists
+      if (user.profileImage) {
+          const oldImagePath = path.join(__dirname, '..', user.profileImage);
+          if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+          }
+      }
+
+      // Save the new profile image path
+      const fileName = req.file.filename;
+      user.profileImage = `uploads/ProfileImages/${fileName}`;
+      await user.save();
+
+      res.status(200).json({
+          message: 'Profile image updated successfully!',
+          profileImage: user.profileImage,
+      });
+  } catch (err) {
+      console.error('Error updating profile image:', err);
+      res.status(500).json({ msg: 'Server error while updating profile image' });
+  }
+};
+
+
+
+// Update Name
+exports.updateName = async (req, res) => {
+  const { userId } = req.user; // userId is attached by the authMiddleware
+  const { name } = req.body;
+
+  if (!name) {
+      return res.status(400).json({ msg: 'Name is required', body: req.body });
+  }
+
+  try {
+      const user = await User.findById(userId);
+
+      if (!user) {
+          return res.status(404).json({ msg: 'User not found' });
+      }
+
+      user.name = name;
+      await user.save();
+
+      res.status(200).json({
+          message: 'Name updated successfully!',
+          name: user.name,
+      });
+  } catch (err) {
+      console.error('Error updating name:', err);
+      res.status(500).json({ msg: 'Server error while updating name' });
+  }
+};
+
+
+exports.deleteProfileImage = async (req, res) => {
+  const { userId } = req.user;
+
+  try {
+      const user = await User.findById(userId);
+
+      if (!user) {
+          return res.status(404).json({ msg: 'User not found' });
+      }
+
+      if (user.profileImage) {
+          const imagePath = path.join(__dirname, '..', user.profileImage);
+          if (fs.existsSync(imagePath)) {
+              fs.unlinkSync(imagePath);
+          }
+          user.profileImage = null;
+          await user.save();
+      }
+
+      res.status(200).json({ message: 'Profile image deleted successfully!' });
+  } catch (err) {
+      console.error('Error deleting profile image:', err);
+      res.status(500).json({ msg: 'Server error while deleting profile image' });
+  }
+};
 

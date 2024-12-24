@@ -1,26 +1,42 @@
 const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin'); // Adjust the path as needed
-const config = require('../config/Jwt'); // Load the JWT secret from config
+const Admin = require('../models/Admin');
+const config = require('../config/Jwt'); // JWT secret from config
 
+// Middleware to authenticate and attach admin to the request
 const authenticateAdmin = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Extract token from header
+  // Extract the token from the Authorization header
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1]; // Extract token from Bearer token format
 
   if (!token) {
     return res.status(401).json({ message: 'Access Denied. No token provided.' });
   }
 
   try {
-    const decoded = jwt.verify(token, config.JWT_SECRET); // Use JWT_SECRET from config
-    const admin = await Admin.findById(decoded.id); // Find the admin by ID
+    // Verify the token using the JWT secret
+    const decoded = jwt.verify(token, config.JWT_SECRET || process.env.JWT_SECRET);
 
+    // Fetch the admin by the ID in the token payload
+    const adminId = decoded.user.id;
+
+    const admin = await Admin.findById(adminId);
     if (!admin) {
       return res.status(404).json({ message: 'Admin not found.' });
     }
 
-    req.admin = admin; // Attach the admin to the request object
+    // Attach the admin object to the request for further use
+    req.admin = admin;
     next();
   } catch (error) {
-    res.status(400).json({ message: 'Invalid token.' });
+    console.error("Token verification error:", error);
+    // Handle token verification errors (expired, invalid, etc.)
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token. Please login again.' });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired. Please login again.' });
+    }
+    return res.status(500).json({ message: 'Server error. Please try again later.' });
   }
 };
 

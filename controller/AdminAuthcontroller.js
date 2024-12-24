@@ -43,7 +43,7 @@ exports.register = [
         },
       };
 
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
+      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
 
       res.status(201).json({ token });
     } catch (err) {
@@ -76,13 +76,14 @@ exports.login = async (req, res) => {
       },
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
 
     res.status(200).json({ token });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
 };
+
 
 // Forgot Password Endpoint
 exports.forgotPassword = async (req, res) => {

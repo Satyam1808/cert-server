@@ -1,4 +1,4 @@
 module.exports = {
-    JWT_SECRET: 'satyam@1234@4321', // Replace with a secure key
+  JWT_SECRET: process.env.JWT_SECRET || 'fallbackSecret', // Replace with a secure key
   };
   

@@ -7,7 +7,8 @@ const UserSchema = new mongoose.Schema({
     mobile: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     resetToken: { type: String },
-    resetTokenExpiration: { type: Date }
+    resetTokenExpiration: { type: Date },
+    profileImage: { type: String }
   }, { timestamps: { createdAt: 'createdAt' } });
 
 // Hash password before saving

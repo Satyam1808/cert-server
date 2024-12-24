@@ -1,5 +1,5 @@
-const Booklets = require('../models/Booklets');
-const Admin = require('../models/Admin');
+const Booklets = require('../models/Booklets'); // Import the Booklets model
+
 
 exports.addBooklets = async (req, res) => {
   const { bookletTitle } = req.body;
@@ -10,27 +10,24 @@ exports.addBooklets = async (req, res) => {
   }
 
   try {
-  
+    const pdfFilePath = pdfFile[0].path.replace(/\\/g, '/');
+    const imageFilePath = imageFile[0].path.replace(/\\/g, '/');
 
-
-    // Create a new Booklet document
+    // Create a new Booklet document, including the admin reference
     const newBooklet = new Booklets({
       bookletTitle,
-      bookletPdf: pdfFile[0].path,
-      images: [imageFile[0].path],
-    
+      bookletPdf: pdfFilePath,
+      images: [imageFilePath],
+      admin: req.admin._id, // Set the admin reference here
     });
 
-    // Save the new booklet to the database
     await newBooklet.save();
 
-    // Populate admin details for response
     const savedBooklet = await Booklets.findById(newBooklet._id).populate('admin', 'name');
 
-    // Respond with the saved booklet and admin details
     res.status(201).json({
       message: 'Booklet added successfully',
-      booklet: savedBooklet
+      booklet: savedBooklet,
     });
   } catch (error) {
     console.error('Error adding booklet:', error);
