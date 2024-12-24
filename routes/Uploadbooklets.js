@@ -37,8 +37,8 @@ router.get('/booklets', async (req, res) => {
 
     const bookletsWithUrls = booklets.map((booklet) => ({
       ...booklet.toObject(),
-      bookletPdf: `${req.protocol}://${req.get('host')}/${booklet.bookletPdf}`,
-      images: booklet.images.map((img) => `${req.protocol}://${req.get('host')}/${img}`),
+      bookletPdf: `/${booklet.bookletPdf}`,
+      images: booklet.images.map((img) => `/${img}`),
     }));
 
     res.status(200).json({
