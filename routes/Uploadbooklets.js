@@ -66,10 +66,10 @@ router.get('/all-booklets', async (req, res) => {
       const bookletsWithUrls = booklets.map((booklet) => ({
         ...booklet.toObject(),
         bookletPdf: booklet.bookletPdf
-            ? `${req.protocol}://${req.get('host')}/${booklet.bookletPdf}`
+            ? `/${booklet.bookletPdf}`
             : null,
         images: booklet.images
-            ? booklet.images.map((img) => `${req.protocol}://${req.get('host')}/${img}`)
+            ? booklet.images.map((img) => `/${img}`)
             : null,
     }));
     
