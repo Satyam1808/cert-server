@@ -63,11 +63,16 @@ router.get('/all-booklets', async (req, res) => {
     const booklets = await Booklets.find()
       .populate('admin', 'name');
     
-    const bookletsWithUrls = booklets.map((booklet) => ({
-      ...booklet.toObject(),
-      bookletPdf: `${req.protocol}://${req.get('host')}/${booklet.bookletPdf}`,
-      images: booklet.images.map((img) => `${req.protocol}://${req.get('host')}/${img}`),
+      const bookletsWithUrls = booklets.map((booklet) => ({
+        ...booklet.toObject(),
+        bookletPdf: booklet.bookletPdf
+            ? `${req.protocol}://${req.get('host')}/${booklet.bookletPdf}`
+            : null,
+        images: booklet.images
+            ? booklet.images.map((img) => `${req.protocol}://${req.get('host')}/${img}`)
+            : null,
     }));
+    
 
     res.status(200).json(bookletsWithUrls);
   } catch (error) {
