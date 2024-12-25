@@ -231,6 +231,44 @@ const getRegisteredEvents = async (req, res) => {
     }
 };
 
+const getRegisteredEventsForAdmin = async (req, res) => {
+    try {
+        // Fetch all registrations and group them by eventId
+        const registrations = await RegistrationForEventModel.aggregate([
+            {
+                $group: {
+                    _id: '$eventId', // Group by eventId
+                    totalParticipants: { $sum: 1 }, // Count participants
+                },
+            },
+        ]);
+
+        if (!registrations.length) {
+            return res.status(200).json([]); // No registrations found
+        }
+
+        // Fetch event details for each eventId
+        const eventIds = registrations.map((reg) => reg._id); // Get unique eventIds
+        const events = await Events.find({ _id: { $in: eventIds } }).lean();
+
+        // Combine event details with registration counts
+        const registeredEvents = registrations.map((reg) => {
+            const event = events.find((e) => e._id.toString() === reg._id.toString());
+            return {
+                eventId: reg._id,
+                eventTitle: event?.eventTitle || 'Unknown Event',
+                eventDate: event?.eventDate || 'N/A',
+                totalParticipants: reg.totalParticipants,
+            };
+        });
+
+        return res.status(200).json(registeredEvents);
+    } catch (err) {
+        console.error('Error fetching registered events:', err);
+        return res.status(500).json({ msg: 'Internal server error' });
+    }
+};
 
 
-module.exports = { registerForEvent, verifyEventOtp , getRegisteredEvents};
+
+module.exports = { registerForEvent, verifyEventOtp , getRegisteredEvents, getRegisteredEventsForAdmin };

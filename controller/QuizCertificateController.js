@@ -4,6 +4,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
+const os = require("os");
 
 // Sends a certificate to the user's email and stores the certificate details in the database
 exports.sendCertificateEmail = async (req, res) => {
@@ -11,7 +12,6 @@ exports.sendCertificateEmail = async (req, res) => {
     if (!token) return res.status(401).send({ message: "Unauthorized: Token missing" });
 
     const { quizName, quizId } = req.body;
-
     if (!quizName || !quizId) return res.status(400).send({ message: "Quiz name and id are required" });
 
     try {
@@ -21,18 +21,13 @@ exports.sendCertificateEmail = async (req, res) => {
 
         const certificatePDF = await sendCertificateToEmail(user.name, user.email);
 
-        const certificatesDir = path.join(__dirname, '../certificates');
-        if (!fs.existsSync(certificatesDir)) {
-            fs.mkdirSync(certificatesDir, { recursive: true });
-        }
-
+        // Use temporary storage
+        const tempDir = os.tmpdir();
         const sanitizedQuizName = quizName.replace(/[^a-zA-Z0-9-_]/g, '_');
-        const certificatePath = path.join(certificatesDir, `${userId}_${sanitizedQuizName}.pdf`);
+        const certificatePath = path.join(tempDir, `${userId}_${sanitizedQuizName}.pdf`);
 
-        // Save the certificate PDF
         fs.writeFileSync(certificatePath, certificatePDF);
 
-        // Save certificate details in the database
         const certificate = new Certificate({
             userId,
             certificateName: `Certificate for ${user.name}`,
@@ -44,20 +39,10 @@ exports.sendCertificateEmail = async (req, res) => {
 
         await certificate.save();
 
-        // Attempt to delete temporary file (if needed)
-        const tempFilePath = path.join(__dirname, 'assets', 'temp_certificate.pdf');
-        try {
-            if (fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
-            }
-        } catch (err) {
-            console.error("Error deleting temporary file:", err.message);
-        }
-
         res.status(200).send({ message: "Certificate sent to email successfully." });
     } catch (err) {
         console.error("Error in sendCertificateEmail:", err.message);
-        res.status(500).send({ message: "Internal Server Error" });
+        res.status(500).send({ message: "Internal Server Error", error: err.message });
     }
 };
 
