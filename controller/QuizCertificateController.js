@@ -19,30 +19,34 @@ exports.sendCertificateEmail = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).send({ message: "User not found" });
 
+        console.log(`Starting certificate generation for user: ${user.name}, email: ${user.email}`);
+
+        // Generate and send the certificate
         const certificatePDF = await sendCertificateToEmail(user.name, user.email);
+        if (!certificatePDF) throw new Error("Failed to generate certificate PDF");
 
-        // Use temporary storage
-        const tempDir = os.tmpdir();
-        const sanitizedQuizName = quizName.replace(/[^a-zA-Z0-9-_]/g, '_');
-        const certificatePath = path.join(tempDir, `${userId}_${sanitizedQuizName}.pdf`);
+        console.log("Certificate generated successfully");
 
-        fs.writeFileSync(certificatePath, certificatePDF);
-
+        // Save certificate details to database
         const certificate = new Certificate({
             userId,
             certificateName: `Certificate for ${user.name}`,
-            certificatePath,
             quizName,
             quizId,
             createdAt: new Date(),
         });
 
         await certificate.save();
+        console.log("Certificate details saved to database");
 
         res.status(200).send({ message: "Certificate sent to email successfully." });
     } catch (err) {
         console.error("Error in sendCertificateEmail:", err.message);
-        res.status(500).send({ message: "Internal Server Error", error: err.message });
+        res.status(500).send({
+            message: "Internal Server Error",
+            error: "Failed to generate or send certificate",
+            details: err.message,
+        });
     }
 };
 
