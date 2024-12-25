@@ -3,13 +3,14 @@ const addEventsController = require('../controller/AddEventsController');
 const router = express.Router();
 const Events = require('../models/Event');
 const authenticateAdmin = require('../middlewares/authMiddleware');
+const userAuthMiddleware = require('../middlewares/userAuthMiddleware');
 
 
 // Route to handle adding events
 router.post('/add-events', authenticateAdmin, addEventsController.addEvents);
 
 // Route to fetch all events with pagination and optional search functionality
-router.get('/events', async (req, res) => {
+router.get('/events',authenticateAdmin, async (req, res) => {
   try {
     const { search = '', page = 1, limit = 10 } = req.query;
     const pageNum = parseInt(page, 10);
@@ -47,6 +48,22 @@ router.get('/events', async (req, res) => {
 });
 
 router.get('/all-events', async (req, res) => {
+  try {
+    const events = await Events.find()
+      .populate('admin', 'name');
+    
+    const eventsWithUrls = events.map((event) => ({
+      ...event.toObject(),
+    }));
+
+    res.status(200).json(eventsWithUrls);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+router.get('/app/all-events',userAuthMiddleware, async (req, res) => {
   try {
     const events = await Events.find()
       .populate('admin', 'name');

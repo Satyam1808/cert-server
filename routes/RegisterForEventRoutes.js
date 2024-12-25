@@ -8,7 +8,7 @@ const adminAuthMiddleware = require('../middlewares/authMiddleware');
 router.post('/register-event', authenticateJWT, registerForEvent);
 
 // POST route for OTP verification
-router.post('/register-event-verify-otp', verifyEventOtp);
+router.post('/register-event-verify-otp',authenticateJWT, verifyEventOtp);
 
 // GET route for fetching registered events for the authenticated user
 router.get('/registered-events', authenticateJWT, getRegisteredEvents);

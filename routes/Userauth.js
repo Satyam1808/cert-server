@@ -27,7 +27,7 @@ router.get('/allUsers', adminAuthMiddleware, (req, res, next) => {
   next();
 }, authController.getAllUsers);
 
-router.get('/:userId', authController.getUserById);
+router.get('/:userId',authenticateJWT, authController.getUserById);
 
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);

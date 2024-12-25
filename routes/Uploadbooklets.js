@@ -6,12 +6,13 @@ const Booklets = require('../models/Booklets');
 const fs = require('fs');
 const path = require('path');
 const authenticateAdmin = require('../middlewares/authMiddleware');
+const userAuthMiddleware = require('../middlewares/userAuthMiddleware');
 
 // Route to handle adding booklets (image and PDF)
 router.post('/add-booklets', authenticateAdmin, upload.fields([{ name: 'pdfFile', maxCount: 1 }, { name: 'imageFile', maxCount: 1 }]), addBookletsController.addBooklets);
 
 // Route to fetch all booklets with pagination and optional search functionality
-router.get('/booklets', async (req, res) => {
+router.get('/booklets',authenticateAdmin, async (req, res) => {
   try {
     const { search = '', page = 1, limit = 10 } = req.query;  // Get the page and limit from the request
     const pageNum = parseInt(page, 10);
@@ -58,7 +59,32 @@ router.get('/booklets', async (req, res) => {
 });
 
 
-router.get('/all-booklets', async (req, res) => {
+router.get('/all-booklets',authenticateAdmin, async (req, res) => {
+  try {
+    const booklets = await Booklets.find()
+      .populate('admin', 'name');
+    
+      const bookletsWithUrls = booklets.map((booklet) => ({
+        ...booklet.toObject(),
+        bookletPdf: booklet.bookletPdf
+            ? `${booklet.bookletPdf}`
+            : null,
+        images: booklet.images
+            ? booklet.images.map((img) => `${img}`)
+            : null,
+    }));
+    
+
+    res.status(200).json(bookletsWithUrls);
+  } catch (error) {
+    console.error('Error fetching booklets:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Route to fetch a all for client
+
+router.get('/app/all-booklets', userAuthMiddleware, async (req, res) => {
   try {
     const booklets = await Booklets.find()
       .populate('admin', 'name');

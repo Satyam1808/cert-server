@@ -3,6 +3,7 @@ const express = require('express');
 const upload = require('../middlewares/addQuizMulterConfig');
 const addQuizController = require('../controller/AddQuizController');
 const authenticateAdmin = require('../middlewares/authMiddleware');
+const userAuthMiddleware = require('../middlewares/userAuthMiddleware');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
@@ -17,7 +18,7 @@ router.post(
 );
 
 // Route to fetch all quizzes with pagination
-router.get('/quizzes', async (req, res) => {
+router.get('/quizzes',authenticateAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const pageNum = parseInt(page, 10);
@@ -88,6 +89,6 @@ router.delete('/quizzes/:id', authenticateAdmin, async (req, res) => {
 
 
 // Route to fetch all quizzes
-router.get('/all-quizzes', addQuizController.getAllQuizzes);
+router.get('/app/all-quizzes',userAuthMiddleware, addQuizController.getAllQuizzes);
 
 module.exports = router;
