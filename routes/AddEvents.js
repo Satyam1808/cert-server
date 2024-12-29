@@ -47,7 +47,7 @@ router.get('/events',authenticateAdmin, async (req, res) => {
   }
 });
 
-router.get('/all-events', async (req, res) => {
+router.get('/all-events', authenticateAdmin ,async (req, res) => {
   try {
     const events = await Events.find()
       .populate('admin', 'name');

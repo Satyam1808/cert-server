@@ -90,5 +90,7 @@ router.delete('/quizzes/:id', authenticateAdmin, async (req, res) => {
 
 // Route to fetch all quizzes
 router.get('/app/all-quizzes',userAuthMiddleware, addQuizController.getAllQuizzes);
+// Route to fetch all quizzes for admin
+router.get('/all-quizzes',authenticateAdmin, addQuizController.getAllQuizzes);
 
 module.exports = router;

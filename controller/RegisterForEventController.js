@@ -233,12 +233,13 @@ const getRegisteredEvents = async (req, res) => {
 
 const getRegisteredEventsForAdmin = async (req, res) => {
     try {
-        // Fetch all registrations and group them by eventId
+        // Fetch all registrations and group them by eventId, including participant details
         const registrations = await RegistrationForEventModel.aggregate([
             {
                 $group: {
                     _id: '$eventId', // Group by eventId
                     totalParticipants: { $sum: 1 }, // Count participants
+                    participants: { $push: '$$ROOT' }, // Collect participant details
                 },
             },
         ]);
@@ -251,7 +252,7 @@ const getRegisteredEventsForAdmin = async (req, res) => {
         const eventIds = registrations.map((reg) => reg._id); // Get unique eventIds
         const events = await Events.find({ _id: { $in: eventIds } }).lean();
 
-        // Combine event details with registration counts
+        // Combine event details with registration counts and participant details
         const registeredEvents = registrations.map((reg) => {
             const event = events.find((e) => e._id.toString() === reg._id.toString());
             return {
@@ -259,6 +260,17 @@ const getRegisteredEventsForAdmin = async (req, res) => {
                 eventTitle: event?.eventTitle || 'Unknown Event',
                 eventDate: event?.eventDate || 'N/A',
                 totalParticipants: reg.totalParticipants,
+                eventLocation: event?.eventLocation || 'N/A', // Add event location
+                targetAudience: event?.targetAudience || 'N/A', // Add target audience
+                eventStatus: event?.eventStatus || 'N/A', // Add event status
+                participants: reg.participants.map((participant) => ({
+                    userId: participant.userId,
+                    fullName: participant.fullName,
+                    mobile: participant.mobile,
+                    email: participant.email,
+                    organization: participant.organization,
+                    registrationId: participant.registrationId,
+                })), // Include participant details
             };
         });
 

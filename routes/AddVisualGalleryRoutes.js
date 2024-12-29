@@ -12,7 +12,7 @@ const userAuthMiddleware = require('../middlewares/userAuthMiddleware');
 router.post('/add-visual-images', authenticateAdmin,  upload.single('imageFile'), addVisualGalleryController.addVisualImages);
 
 // Route to fetch all visual images with pagination
-router.get('/visual-images', async (req, res) => {
+router.get('/visual-images',authenticateAdmin, async (req, res) => {
     try {
       const { page = 1, limit = 10 } = req.query;
       const pageNum = parseInt(page, 10);
