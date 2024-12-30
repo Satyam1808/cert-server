@@ -7,10 +7,17 @@ const { check, validationResult } = require('express-validator');
 // Registration Endpoint
 exports.register = [
   check('email').isEmail().withMessage('Invalid email address'),
-  check('mobile').isLength({ min: 10, max: 10 }).isNumeric().withMessage('Mobile number must be 10 digits'),
-  check('password').matches(/.*[a-zA-Z].*/).withMessage('Password must contain at least one letter')
-    .matches(/.*\d.*/).withMessage('Password must contain at least one number'),
-
+  check('mobile')
+    .isLength({ min: 10, max: 10 })
+    .isNumeric()
+    .withMessage('Mobile number must be exactly 10 digits'),
+  check('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long')
+    .matches(/.*[a-zA-Z].*/)
+    .withMessage('Password must contain at least one letter')
+    .matches(/.*\d.*/)
+    .withMessage('Password must contain at least one number'),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -21,7 +28,6 @@ exports.register = [
 
     try {
       let admin = await Admin.findOne({ email });
-
       if (admin) {
         return res.status(400).json({ msg: 'Admin already exists' });
       }
@@ -32,7 +38,7 @@ exports.register = [
         name,
         email,
         mobile,
-        password: hashedPassword
+        password: hashedPassword,
       });
 
       await admin.save();
@@ -47,9 +53,10 @@ exports.register = [
 
       res.status(201).json({ token });
     } catch (err) {
+      console.error(err.message);
       res.status(500).json({ msg: 'Server error' });
     }
-  }
+  },
 ];
 
 // Login Endpoint
