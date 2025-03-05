@@ -15,47 +15,31 @@ const spamRoutes = require('./routes/spamRoutes');
 const bodyParser = require('body-parser');
 const userHelpRoutes = require('./routes/UserHelpAndSupportRoutes');
 const passwordRoutes = require('./routes/passwordRoutes');
-const helmet = require('helmet');
 const passwordGeneratorRoutes = require('./routes/passwordGeneratorRoutes');
 const certificateRoutes = require('./routes/QuizCertificateRoute');
 const { Server } = require('socket.io');
 const chatbotRoutes = require('./routes/botRoute');
 const ChatbotMessage = require('./models/botModel');
 const http = require('http');
+const virusTotalRoutes = require("./routes/virusTotalRoutes");
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
 connectDB();
 
 // Middleware to enable CORS
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
 
 require('dotenv').config();
 
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Realtime Communication with Socket.IO
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
-  socket.on('sendMessage', async (data) => {
-    try {
-      const message = await ChatbotMessage.findById(data.messageId).populate('options.nextMessageId');
-      socket.emit('botResponse', message);
-    } catch (err) {
-      socket.emit('error', { message: 'Error fetching message' });
-    }
-  });
-
-  socket.on('disconnect', () => console.log('User disconnected:', socket.id));
-});
-
 
 // Middleware to serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/generated_certificates', express.static(path.join(__dirname, 'generated_certificates')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/auth', adminRoutes);
@@ -72,7 +56,7 @@ app.use('/api/password', passwordRoutes);
 app.use('/api/password-generator', passwordGeneratorRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/bot',chatbotRoutes);
-
+app.use("/api/virus-total", virusTotalRoutes);
 
 const PORT = process.env.PORT || 5000;
 

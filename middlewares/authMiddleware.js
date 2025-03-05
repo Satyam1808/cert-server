@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const config = require('../config/Jwt'); // JWT secret from config
+require('dotenv').config();
 
 // Middleware to authenticate and attach admin to the request
 const authenticateAdmin = async (req, res, next) => {
