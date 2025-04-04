@@ -4,13 +4,10 @@ const { registerForEvent, verifyEventOtp ,getRegisteredEvents ,getRegisteredEven
 const authenticateJWT = require('../middlewares/userAuthMiddleware'); // JWT middleware
 const adminAuthMiddleware = require('../middlewares/authMiddleware');
 
-// POST route for event registration
 router.post('/register-event', authenticateJWT, registerForEvent);
 
-// POST route for OTP verification
 router.post('/register-event-verify-otp',authenticateJWT, verifyEventOtp);
 
-// GET route for fetching registered events for the authenticated user
 router.get('/registered-events', authenticateJWT, getRegisteredEvents);
 router.get('/admin/all-registered-events', adminAuthMiddleware, getRegisteredEventsForAdmin);
 

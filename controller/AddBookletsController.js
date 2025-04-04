@@ -1,5 +1,4 @@
-const Booklets = require('../models/Booklets'); // Import the Booklets model
-
+const Booklets = require('../models/Booklets'); 
 
 exports.addBooklets = async (req, res) => {
   const { bookletTitle } = req.body;
@@ -13,12 +12,11 @@ exports.addBooklets = async (req, res) => {
     const pdfFilePath = pdfFile[0].path.replace(/\\/g, '/');
     const imageFilePath = imageFile[0].path.replace(/\\/g, '/');
 
-    // Create a new Booklet document, including the admin reference
     const newBooklet = new Booklets({
       bookletTitle,
       bookletPdf: pdfFilePath,
       images: [imageFilePath],
-      admin: req.admin._id, // Set the admin reference here
+      admin: req.admin._id, 
     });
 
     await newBooklet.save();

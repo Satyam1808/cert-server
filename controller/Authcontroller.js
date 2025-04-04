@@ -11,12 +11,10 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const { check, validationResult } = require('express-validator');
 
-
-// Temporary store for OTPs and user details
 const otpStore = new Map();
 const loginAttempts = new Map();
 
-// Configure email transporter
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -25,7 +23,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-/// Registration Endpoint
+
 exports.register = [
   check('name').notEmpty().withMessage('Name is required'),
   check('email').isEmail().withMessage('Invalid email address'),
@@ -81,7 +79,6 @@ exports.register = [
 ];
 
 
-// OTP Verification Endpoint
 exports.verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
   const sanitizedEmail = email.trim().toLowerCase();
@@ -134,7 +131,6 @@ exports.verifyOtp = async (req, res) => {
 };
 
 
-// Resend OTP Endpoint
 exports.resendOtp = async (req, res) => {
   const { email } = req.body;
   const storedOtpData = otpStore.get(email);
@@ -160,7 +156,7 @@ exports.resendOtp = async (req, res) => {
 
     otpStore.set(email, { 
       otp, 
-      expiresAt: Date.now() + 60000, // OTP is valid for 1 minute
+      expiresAt: Date.now() + 60000, 
       userData: { name, email, mobile, password } 
     });
 
@@ -195,7 +191,7 @@ exports.login = async (req, res) => {
 
     const loginAttemptData = loginAttempts.get(sanitizedEmail) || { attempts: 0, lockedUntil: 0 };
 
-    // Check if user is locked out
+  
     if (loginAttemptData.lockedUntil > Date.now()) {
       const timeLeft = Math.ceil((loginAttemptData.lockedUntil - Date.now()) / 1000);
       return res.status(400).json({ msg: `Too many failed attempts. Try again in ${timeLeft} seconds.` });
@@ -216,7 +212,7 @@ exports.login = async (req, res) => {
     }
     
 
-    // Reset login attempts on successful login
+    
     loginAttempts.delete(sanitizedEmail);
 
     const token = jwt.sign(
@@ -238,7 +234,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// Middleware to get current user
 exports.getCurrentUser = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -274,17 +269,15 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Get user by ID
+
 exports.getUserById = async (req, res) => {
   try {
-    const { userId } = req.params; // Get userId from URL parameters
-
-    // Validate if the userId is a valid ObjectId
+    const { userId } = req.params; 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ msg: 'Invalid user ID' });
     }
 
-    const user = await User.findById(userId).select('-password'); // Exclude password
+    const user = await User.findById(userId).select('-password'); 
 
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
@@ -297,41 +290,36 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// Forgot Password Endpoint
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
-    const normalizedEmail = email.toLowerCase(); // Normalize email before query
+    const normalizedEmail = email.toLowerCase(); 
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(400).json({ msg: 'User does not exist' });
     }
 
-    // Generate a reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetToken = resetToken;
-    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour expiration
+    user.resetTokenExpiration = Date.now() + 3600000; 
     await user.save();
 
-    // Create the reset URL
     const resetUrl = `https://cert-in-app/reset-password?token=${resetToken}`;
 
 
-
-    // HTML content for the email
     const htmlContent = `
       <p>You have requested to reset your password. Click the link below to reset your password:</p>
       <p><a href="${resetUrl}">${resetUrl}</a></p>
       <p>If you did not request this, please ignore this email.</p>
     `;
 
-    // Send the email with the reset link
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: normalizedEmail,
       subject: 'Password Reset',
-      html: htmlContent // Send HTML content instead of plain text
+      html: htmlContent 
     });
 
     res.status(200).json({ msg: 'Reset link sent to email' });
@@ -341,8 +329,6 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-
-// Reset Password Endpoint
 exports.resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
   try {
@@ -375,8 +361,6 @@ exports.updateProfileImage = async (req, res) => {
       if (!req.file) {
           return res.status(400).json({ msg: 'No image file uploaded' });
       }
-
-      // Delete the old profile image if it exists
       if (user.profileImage) {
           const oldImagePath = path.join(__dirname, '..', user.profileImage);
           if (fs.existsSync(oldImagePath)) {
@@ -384,7 +368,6 @@ exports.updateProfileImage = async (req, res) => {
           }
       }
 
-      // Save the new profile image path
       const fileName = req.file.filename;
       user.profileImage = `uploads/ProfileImages/${fileName}`;
       await user.save();
@@ -399,11 +382,8 @@ exports.updateProfileImage = async (req, res) => {
   }
 };
 
-
-
-// Update Name
 exports.updateName = async (req, res) => {
-  const { userId } = req.user; // userId is attached by the authMiddleware
+  const { userId } = req.user; 
   const { name } = req.body;
 
   if (!name) {

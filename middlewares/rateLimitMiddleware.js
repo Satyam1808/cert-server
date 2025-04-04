@@ -16,15 +16,12 @@ module.exports = async (req, res, next) => {
         if (!userUsage) {
             userUsage = new ApiUsage({ userId, requests: [] });
         }
-
-        // Filter requests made in the last 24 hours
         userUsage.requests = userUsage.requests.filter(req => (now - new Date(req.timestamp)) < 24 * 60 * 60 * 1000);
 
         if (userUsage.requests.length >= RATE_LIMITS.daily) {
             return res.status(429).json({ error: "Daily API limit reached. Try again tomorrow." });
         }
 
-        // Filter requests made in the last 1 minute
         const recentRequests = userUsage.requests.filter(req => (now - new Date(req.timestamp)) < 60 * 1000);
         if (recentRequests.length >= RATE_LIMITS.perMinute) {
             return res.status(429).json({ error: "Too many requests. Try again later." });

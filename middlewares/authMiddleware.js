@@ -1,23 +1,18 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
-const config = require('../config/Jwt'); // JWT secret from config
+const config = require('../config/Jwt');
 require('dotenv').config();
 
-// Middleware to authenticate and attach admin to the request
 const authenticateAdmin = async (req, res, next) => {
-  // Extract the token from the Authorization header
   const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1]; // Extract token from Bearer token format
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ message: 'Access Denied. No token provided.' });
   }
 
   try {
-    // Verify the token using the JWT secret
     const decoded = jwt.verify(token, config.JWT_SECRET || process.env.JWT_SECRET);
-
-    // Fetch the admin by the ID in the token payload
     const adminId = decoded.user.id;
 
     const admin = await Admin.findById(adminId);
@@ -25,12 +20,9 @@ const authenticateAdmin = async (req, res, next) => {
       return res.status(404).json({ message: 'Admin not found.' });
     }
 
-    // Attach the admin object to the request for further use
     req.admin = admin;
     next();
   } catch (error) {
-    console.error("Token verification error:", error);
-    // Handle token verification errors (expired, invalid, etc.)
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ message: 'Invalid token. Please login again.' });
     }

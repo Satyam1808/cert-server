@@ -8,13 +8,11 @@ const path = require('path');
 const authenticateAdmin = require('../middlewares/authMiddleware');
 const userAuthMiddleware = require('../middlewares/userAuthMiddleware');
 
-// Route to handle adding booklets (image and PDF)
 router.post('/add-booklets', authenticateAdmin, upload.fields([{ name: 'pdfFile', maxCount: 1 }, { name: 'imageFile', maxCount: 1 }]), addBookletsController.addBooklets);
 
-// Route to fetch all booklets with pagination and optional search functionality
 router.get('/booklets',authenticateAdmin, async (req, res) => {
   try {
-    const { search = '', page = 1, limit = 10 } = req.query;  // Get the page and limit from the request
+    const { search = '', page = 1, limit = 10 } = req.query;  
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
     
@@ -27,13 +25,11 @@ router.get('/booklets',authenticateAdmin, async (req, res) => {
         ],
       };
     }
-
-    // Fetch booklets with pagination
     const totalBooklets = await Booklets.countDocuments(query);
     const booklets = await Booklets.find(query)
       .populate('admin', 'name')
-      .skip((pageNum - 1) * limitNum)  // Skip to the correct page
-      .limit(limitNum);  // Limit the number of results per page
+      .skip((pageNum - 1) * limitNum)  
+      .limit(limitNum); 
       
 
       const bookletsWithUrls = booklets.map((booklet) => ({
@@ -49,7 +45,7 @@ router.get('/booklets',authenticateAdmin, async (req, res) => {
 
     res.status(200).json({
       booklets: bookletsWithUrls,
-      totalPages: Math.ceil(totalBooklets / limitNum),  // Calculate total pages
+      totalPages: Math.ceil(totalBooklets / limitNum),  
       
     });
   } catch (error) {
@@ -82,7 +78,6 @@ router.get('/all-booklets',authenticateAdmin, async (req, res) => {
   }
 });
 
-// Route to fetch a all for client
 
 router.get('/app/all-booklets', userAuthMiddleware, async (req, res) => {
   try {
@@ -107,7 +102,7 @@ router.get('/app/all-booklets', userAuthMiddleware, async (req, res) => {
   }
 });
 
-// Route to delete a booklet
+
 router.delete('/booklets/:id', authenticateAdmin, async (req, res) => {
   try {
     const booklet = await Booklets.findById(req.params.id);
@@ -115,7 +110,6 @@ router.delete('/booklets/:id', authenticateAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Booklet not found' });
     }
 
-    // Function to delete a file and log an error if it fails
     const deleteFile = (filePath) => {
       const fullPath = path.join(__dirname, '..', filePath);
       fs.unlink(fullPath, (err) => {
@@ -127,11 +121,9 @@ router.delete('/booklets/:id', authenticateAdmin, async (req, res) => {
       });
     };
 
-    // Delete the PDF and image files from the file system
     deleteFile(booklet.bookletPdf);
     booklet.images.forEach((image) => deleteFile(image));
 
-    // Remove the booklet from the database
     await Booklets.findByIdAndDelete(req.params.id);
     
     res.status(200).json({ message: 'Booklet deleted successfully' });

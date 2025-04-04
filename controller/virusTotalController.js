@@ -1,11 +1,10 @@
 const axios = require("axios");
 require("dotenv").config();
 const qs = require("qs");
-const cache = {}
 
 exports.submitUrl = async (req, res) => {
     try {
-        console.log("Received request body:", req.body); // Log received body
+        console.log("Received request body:", req.body); 
 
         const { url } = req.body;
 
@@ -54,7 +53,7 @@ exports.getReport = async (req, res) => {
 
         const status = response.data.data.attributes.status;
 
-        // Return the full response along with the status
+        
         res.json({
             status,
             data: response.data.data

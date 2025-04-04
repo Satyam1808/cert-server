@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/Jwt');
 const { check, validationResult } = require('express-validator');
 
-// Registration Endpoint
 exports.register = [
   check('email').isEmail().withMessage('Invalid email address'),
   check('mobile')
@@ -59,7 +58,7 @@ exports.register = [
   },
 ];
 
-// Login Endpoint
+
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -92,7 +91,6 @@ exports.login = async (req, res) => {
 };
 
 
-// Forgot Password Endpoint
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
@@ -130,7 +128,6 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// Reset Password Endpoint
 exports.resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
   try {

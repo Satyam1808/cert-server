@@ -1,29 +1,23 @@
-const VisualImages = require('../models/VisualGalleryModel'); // Import the Booklets model
-
+const VisualImages = require('../models/VisualGalleryModel');
 
 exports.addVisualImages = async (req, res) => {
-  const { imageTitle } = req.body;
-  const {imageURL} = req.body;
-  const {imageDesc} = req.body;
-  const imageFile = req.file;
-  const {galleryType}  = req.body;
-
-  if (!imageTitle || !imageFile ||!galleryType) {
-    return res.status(400).json({ message: 'Please provide all required fields.' });
-  }
-
   try {
-  
+    const { imageTitle, imageURL, imageDesc, galleryType } = req.body;
+    const imageFile = req.file;
+
+    if (!imageTitle || !imageFile || !galleryType) {
+      return res.status(400).json({ message: 'Please provide all required fields: imageTitle, imageFile, and galleryType.' });
+    }
+
     const imageFilePath = imageFile.path.replace(/\\/g, '/');
 
-    // Create a new Booklet document, including the admin reference
     const newVisualImage = new VisualImages({
-        imageTitle,
-        imageURL,
-        imageDesc,
-        galleryType,
-        images: imageFilePath,
-      admin: req.admin._id, // Set the admin reference here
+      imageTitle: imageTitle.trim(),
+      imageURL: imageURL ? imageURL.trim() : null,
+      imageDesc: imageDesc ? imageDesc.trim() : null,
+      galleryType: galleryType.trim(),
+      images: imageFilePath,
+      admin: req.admin._id,
     });
 
     await newVisualImage.save();
@@ -35,20 +29,22 @@ exports.addVisualImages = async (req, res) => {
       visualImages: savedVisualImage,
     });
   } catch (error) {
-    console.error('Error adding Image:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
-// Controller method to update visibility
+
 exports.updateVisibility = async (req, res) => {
   try {
     const imageId = req.params.id;
-    const { visibility } = req.body; // Expecting visibility to be a boolean
+    const { visibility } = req.body;
 
-    // Update the visibility field in the database
+    if (typeof visibility !== 'boolean') {
+      return res.status(400).json({ message: 'Invalid visibility value. It must be a boolean.' });
+    }
+
     const updatedImage = await VisualImages.findByIdAndUpdate(
       imageId,
-      { visible: visibility }, // Assuming you have a 'visible' field in your schema
+      { visible: visibility },
       { new: true }
     );
 
@@ -58,8 +54,6 @@ exports.updateVisibility = async (req, res) => {
 
     res.status(200).json({ message: 'Visibility updated successfully', updatedImage });
   } catch (error) {
-    console.error('Error updating visibility:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
-

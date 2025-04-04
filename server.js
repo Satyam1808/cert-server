@@ -15,29 +15,21 @@ const spamRoutes = require('./routes/spamRoutes');
 const bodyParser = require('body-parser');
 const userHelpRoutes = require('./routes/UserHelpAndSupportRoutes');
 const passwordRoutes = require('./routes/passwordRoutes');
-const passwordGeneratorRoutes = require('./routes/passwordGeneratorRoutes');
 const certificateRoutes = require('./routes/QuizCertificateRoute');
-const { Server } = require('socket.io');
 const chatbotRoutes = require('./routes/botRoute');
-const ChatbotMessage = require('./models/botModel');
-const http = require('http');
 const virusTotalRoutes = require("./routes/virusTotalRoutes");
 
 const app = express();
 connectDB();
 
-// Middleware to enable CORS
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 
 require('dotenv').config();
 
-// Middleware to parse JSON bodies
 app.use(express.json());
 
-
-// Middleware to serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/generated_certificates', express.static(path.join(__dirname, 'generated_certificates')));
 
@@ -53,7 +45,6 @@ app.use('/api/quiz-result',quizResult);
 app.use('/api/spam', spamRoutes);
 app.use('/api/userhelp', userHelpRoutes);
 app.use('/api/password', passwordRoutes);
-app.use('/api/password-generator', passwordGeneratorRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/bot',chatbotRoutes);
 app.use("/api/virus-total", virusTotalRoutes);

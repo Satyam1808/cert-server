@@ -1,11 +1,9 @@
 const Events = require('../models/Event');
 
 exports.addEvents = async (req, res) => {
+  
 
-  console.log('Request Body:', req.body);  // Log the body
-  console.log('Admin:', req.admin);        // Log the admin
-
-  const { eventTitle, targetAudience, eventDate, eventLocation, eventStatus } = req.body; // Match fields here
+  const { eventTitle, targetAudience, eventDate, eventLocation, eventStatus } = req.body; 
 
 
   if (!eventTitle || !targetAudience|| !eventDate || !eventLocation || !eventStatus) {
@@ -13,15 +11,14 @@ exports.addEvents = async (req, res) => {
   }
 
   try {
-    
-    // Create a new event
+
     const newEvent = new Events({
       eventTitle,
       targetAudience,
       eventDate,
-      eventLocation, // Correct field
+      eventLocation, 
       eventStatus,
-      admin: req.admin._id, // Set by your auth middleware
+      admin: req.admin._id, 
     });
 
     await newEvent.save();

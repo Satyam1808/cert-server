@@ -4,7 +4,7 @@ exports.getSuggestions = (password) => {
   if (!/[0-9]/.test(password)) return 'Use some numbers.';
   if (!/[\W_]/.test(password)) return 'Include symbols or special characters (e.g., @, #, $, %).';
   if (password.length < 12) return 'Make your password longer (12+ characters).';
-  return 'No suggestions.'; // No suggestions if all conditions are met
+  return 'No suggestions.';
 };
 
   
@@ -18,17 +18,14 @@ exports.getSuggestions = (password) => {
       'Excellent! Your password is highly secure. Keep it safe and unique.',
     ];
   
-    // Map score (0–10) to feedback index (0–4)
     const feedbackIndex = Math.min(Math.floor(score / 2), feedbackOptions.length - 1);
   
-    // Add dynamic encouragement based on the user's password
     let encouragement = '';
     if (password.length < 8) encouragement += ' Consider adding more characters to make it harder to guess.';
     if (!/[A-Z]/.test(password)) encouragement += ' A mix of uppercase and lowercase letters would strengthen it further.';
     if (!/[0-9]/.test(password)) encouragement += ' Adding numbers can increase its complexity.';
     if (!/[\W_]/.test(password)) encouragement += ' Including symbols (e.g., @, #, %, &) makes it even tougher to crack.';
   
-    // Generate final feedback message
     return `${feedbackOptions[feedbackIndex]}${encouragement ? ' ' + encouragement.trim() : ''}`;
   };
   

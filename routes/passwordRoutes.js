@@ -3,7 +3,6 @@ const router = express.Router();
 const { checkPasswordStrength } = require('../controller/passwordController');
 const userAuthMiddleware = require('../middlewares/userAuthMiddleware');
 
-// Password strength route
 router.post('/strength',userAuthMiddleware, checkPasswordStrength);
 
 module.exports = router;

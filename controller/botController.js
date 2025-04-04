@@ -1,6 +1,5 @@
 const ChatbotMessage = require("../models/botModel");
 
-// Get initial messages
 exports.getInitialMessages = async (req, res) => {
     try {
         const initialMessages = await ChatbotMessage.find({ isInitial: true });
@@ -10,7 +9,6 @@ exports.getInitialMessages = async (req, res) => {
     }
 };
 
-// Handle user response and fetch next bot message
 exports.getNextResponse = async (req, res) => {
     const { userMessage } = req.body;
 
@@ -29,7 +27,6 @@ exports.getNextResponse = async (req, res) => {
     }
 };
 
-// Add a new chatbot message
 exports.addChatbotMessage = async (req, res) => {
     const { message, options, isInitial, trigger } = req.body;
 

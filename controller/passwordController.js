@@ -7,30 +7,21 @@ exports.checkPasswordStrength = (req, res) => {
   if (!password) return res.status(400).json({ error: 'Password is required.' });
 
   const analysis = zxcvbn(password);
-
-  // Scale score to 10
   const scaledScore = Math.round((analysis.score / 4) * 10);
-
-  // Crack time
   const crackTimeSeconds = analysis.crack_times_seconds.online_no_throttling_10_per_second;
   const estimatedCrackTime = formatCrackTime(crackTimeSeconds);
-
-  // Feedback and Suggestions
   const feedback = getEngagingFeedback(analysis.score, password);
-  const suggestion = getSuggestions(password); // Now returns only one suggestion
+  const suggestion = getSuggestions(password);
 
-  // Response
   res.json({
-    score: scaledScore, // 0 to 10
+    score: scaledScore,
     strength: getStrengthLevel(scaledScore),
     crackTime: estimatedCrackTime,
     feedback,
-    suggestion, // Single suggestion
+    suggestion,
   });
 };
 
-
-// Helper: Strength levels
 const getStrengthLevel = (score) => {
   if (score < 3) return 'Very Weak';
   if (score < 5) return 'Weak';
@@ -39,7 +30,6 @@ const getStrengthLevel = (score) => {
   return 'Very Strong';
 };
 
-// Helper: Format crack time (Updated to handle large numbers)
 const formatCrackTime = (seconds) => {
   const units = [
     { label: 'centuries', value: 3155760000 },
@@ -58,10 +48,10 @@ const formatCrackTime = (seconds) => {
     if (seconds >= unit.value) {
       const value = Math.floor(seconds / unit.value);
       if (value >= 100) {
-        return `several ${unit.label}`;  // Show "several" if the number is too large (e.g., "several centuries")
+        return `several ${unit.label}`;
       }
       formattedValue = `${value.toLocaleString()} ${unit.label}`;
-      break;  // Return the first meaningful unit
+      break;
     }
   }
 
